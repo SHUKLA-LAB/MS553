@@ -1,0 +1,37 @@
+#BSUB -W 3
+#BSUB -q short
+#BSUB -o ./logs
+#BSUB -cwd .
+#BSUB -n 8
+#BSUB -M 128
+#BSUB -R rusage[mem=128]
+#BSUB -J public_datasets
+#BSUB -P public_datasets
+
+
+# Load the expression matrices for all the datasets
+Rscript load_objects.R
+
+# QC and filtering low quality cells
+Rscript qc_preprocessingx.R \
+  --input merged_seurat_all_samples.rds \
+  --output processed_seurat_qc.rds \
+  --min_umi 500 \
+  --max_umi 7000 \
+  --min_log10_genes_per_umi 0.85 \
+  --max_mito_ratio 0.20
+
+# Harmony integration
+Rscript run_harmony.R \
+  --input processed_seurat_qc.rds \
+  --output processed_seurat_qc_harmony.rds \
+  --pdf qc_clustering_umaps.pdf \
+  --group_by Sample \
+  --dims 30 \
+  --resolution 0.1 \
+  --min_dist 0.2
+
+# Downstream plots
+Rscript downstream_plots.R --input processed_seurat_qc_harmony.rds 
+
+
